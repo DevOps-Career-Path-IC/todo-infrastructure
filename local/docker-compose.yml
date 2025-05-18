@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ../../todo-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://localhost:3001
+    volumes:
+      - ../../todo-frontend/src:/app/src
+      - /app/node_modules
+    networks:
+      - todo-network
+  api:
+    build:
+      context: ../../todo-backend/api
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=todo_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SQS_ENDPOINT=http://elasticmq:9324
+      - SQS_REGION=elasticmq
+      - SQS_ACCESS_KEY=local
+      - SQS_SECRET_KEY=local
+    volumes:
+      - ../../todo-backend/api:/app
+    networks:
+      - todo-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      elasticmq:
+        condition: service_started
+  worker:
+    build:
+      context: ../../todo-backend/worker
+      dockerfile: Dockerfile
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=todo_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SQS_ENDPOINT=http://elasticmq:9324
+      - SQS_REGION=elasticmq
+      - SQS_ACCESS_KEY=local
+      - SQS_SECRET_KEY=local
+    volumes:
+      - ../../todo-backend/worker:/app
+    networks:
+      - todo-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticmq:
+        condition: service_started
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_DB=todo_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../todo-backend/api/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - todo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d todo_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - todo-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  elasticmq:
+    image: softwaremill/elasticmq-native:latest
+    ports:
+      - "9324:9324"
+      - "9325:9325"
+    networks:
+      - todo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9324/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  todo-network:
+    external: true
