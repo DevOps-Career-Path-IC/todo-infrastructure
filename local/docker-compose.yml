@@ -123,4 +123,4 @@ volumes:
 
 networks:
   todo-network:
-    external: true
+    external: false
