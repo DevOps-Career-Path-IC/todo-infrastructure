@@ -1,0 +1,12 @@
+prod:
+  security_group:
+    - name: prod
+      ingress:
+        - port: 80
+          inbound: 0.0.0/0
+    - name: test-2
+      ingress:
+        - port: 80
+          inbound: 0.0.0/0
+  vpc:
+    - name: todo-app

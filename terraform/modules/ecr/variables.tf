@@ -1,0 +1,9 @@
+variable "name_prefix" {
+  description = "Prefix to be used for resource naming"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment name (e.g., dev, staging, prod)"
+  type        = string
+}
