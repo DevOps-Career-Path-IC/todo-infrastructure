@@ -7,9 +7,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - REACT_APP_API_URL=http://localhost:3001
     volumes:
       - ../../todo-frontend/src:/app/src
       - /app/node_modules
@@ -21,21 +18,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3001:3001"
-    environment:
-      - FLASK_ENV=development
-      - FLASK_DEBUG=1
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=todo_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - SQS_REGION=elasticmq
-      - SQS_ACCESS_KEY=local
-      - SQS_SECRET_KEY=local
-      - SQS_QUEUE_URL=http://elasticmq:9324/queue/todo-app-dev-queue
-      - SQS_DLQ_URL=http://elasticmq:9324/queue/todo-app-dev-dlq
+    env_file:
+      - .env.local
     volumes:
       - ../../todo-backend/api:/app
       - ../../todo-backend/elasticmq.conf:/opt/elasticmq.conf
@@ -52,19 +36,8 @@ services:
     build:
       context: ../../todo-backend/worker
       dockerfile: Dockerfile
-    environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=todo_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - SQS_REGION=elasticmq
-      - SQS_ACCESS_KEY=local
-      - SQS_SECRET_KEY=local
-      - SQS_QUEUE_URL=http://elasticmq:9324/queue/todo-app-dev-queue
-      - SQS_DLQ_URL=http://elasticmq:9324/queue/todo-app-dev-dlq
+    env_file:
+      - .env.local
     volumes:
       - ../../todo-backend/worker:/app
       - ../../todo-backend/elasticmq.conf:/opt/elasticmq.conf
@@ -95,6 +68,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
   redis:
     image: redis:7-alpine
     ports:
@@ -108,6 +82,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
   elasticmq:
     image: softwaremill/elasticmq-native:latest
     ports:
@@ -123,6 +98,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
 volumes:
   postgres_data:
